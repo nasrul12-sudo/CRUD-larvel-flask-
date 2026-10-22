@@ -1,0 +1,128 @@
+# ============================================================
+# ERP DOCKER COMPOSE
+# ============================================================
+# Port yang dipakai (pastikan tidak bentrok):
+#   - 8001 → Laravel (via nginx)
+#   - 5000 → Flask
+#   - 3307 → MySQL (akses dari host)
+# ============================================================
+
+services:
+  # ==========================================
+  # MySQL 8.0
+  # ==========================================
+  erp_mysql:
+    image: mysql:8.0
+    container_name: erp_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Jakarta
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - erp_mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+    networks:
+      - erp_network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ==========================================
+  # Laravel (PHP-FPM) — build dari Dockerfile
+  # ==========================================
+  erp_laravel:
+    build:
+      context: ./laravel
+      dockerfile: Dockerfile
+    container_name: erp_laravel
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ../erp-app:/var/www/html
+      - ./laravel/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    environment:
+      # 🔑 DB config diinject dari .env Docker (single source of truth)
+      DB_CONNECTION: mysql
+      DB_HOST: erp_mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE}
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      # App config
+      APP_ENV: ${LARAVEL_APP_ENV}
+      APP_DEBUG: ${LARAVEL_APP_DEBUG}
+      APP_URL: ${LARAVEL_APP_URL}
+      APP_TIMEZONE: ${LARAVEL_TIMEZONE}
+    depends_on:
+      erp_mysql:
+        condition: service_healthy
+    networks:
+      - erp_network
+    entrypoint: ["/usr/local/bin/entrypoint.sh"]
+    command: ["php-fpm"]
+
+  # ==========================================
+  # Nginx (web server untuk Laravel)
+  # ==========================================
+  erp_nginx:
+    image: nginx:1.27-alpine
+    container_name: erp_nginx
+    restart: unless-stopped
+    ports:
+      - "${LARAVEL_PORT}:80"
+    volumes:
+      - ../erp-app:/var/www/html:ro
+      - ./laravel/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - erp_laravel
+    networks:
+      - erp_network
+
+  # ==========================================
+  # Flask (Python)
+  # ==========================================
+  erp_flask:
+    build:
+      context: ../flask-report
+      dockerfile: ../erp-docker/flask/Dockerfile
+    container_name: erp_flask
+    restart: unless-stopped
+    ports:
+      - "${FLASK_PORT}:5000"
+    environment:
+      DB_HOST: erp_mysql
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: ${MYSQL_USER}
+      DB_PASS: ${MYSQL_PASSWORD}
+      FLASK_ENV: ${FLASK_ENV}
+      FLASK_DEBUG: ${FLASK_DEBUG}
+    volumes:
+      # Bind-mount kode agar hot-reload di mode debug
+      - ../flask-report:/app
+    depends_on:
+      erp_mysql:
+        condition: service_healthy
+    networks:
+      - erp_network
+
+# ==========================================
+# Volumes & Networks (nama eksplisit)
+# ==========================================
+volumes:
+  erp_mysql_data:
+    name: erp_mysql_data
+
+networks:
+  erp_network:
+    name: erp_network
+    driver: bridge
