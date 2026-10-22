@@ -4,47 +4,122 @@
     <meta charset="UTF-8">
     <title>Selisih Berat per Produk</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 30px; background: #f5f5f5; }
-        h1 { color: #1e40af; }
-        table { border-collapse: collapse; width: 100%; background: white; }
-        th, td { border: 1px solid #999; padding: 8px 12px; text-align: left; }
-        th { background: #1e40af; color: white; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #1e40af; margin-bottom: 5px; }
+        .subtitle { color: #666; margin-bottom: 15px; font-size: 14px; }
+        .refresh-info {
+            background: #eff6ff; border-left: 4px solid #1e40af;
+            padding: 10px 15px; margin-bottom: 15px;
+            font-size: 13px; color: #1e3a8a;
+        }
+        #last-update { font-family: monospace; }
+        table {
+            border-collapse: collapse; width: 100%;
+            background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            font-size: 13px;
+        }
+        th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }
+        th { background: #1e40af; color: white; font-weight: 600; }
         tr:nth-child(even) { background: #f9fafb; }
-        .positive { color: #dc2626; font-weight: bold; }
-        .zero { color: #16a34a; font-weight: bold; }
+        tr:hover { background: #f3f4f6; }
+        .positive { color: #dc2626; font-weight: 600; }
+        .zero { color: #16a34a; font-weight: 600; }
+        .empty { text-align: center; color: #666; padding: 30px; }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 4px;
+            font-size: 11px; background: #dbeafe; color: #1e40af; font-weight: 600;
+        }
+        .num { text-align: right; font-family: monospace; }
     </style>
 </head>
 <body>
     <h1>Selisih Berat per Produk (FG)</h1>
-    <p>Perbandingan total berat antara Work Allocation (SPKO) dan Work Completion (NTHKO).</p>
+    <p class="subtitle">
+        Perbandingan total berat SPKO vs NTHKO.
+        <span class="badge">SQLAlchemy ORM</span>
+    </p>
+
+    <div class="refresh-info">
+        🔄 Auto-refresh setiap <strong>10 detik</strong> —
+        <span id="last-update">memuat...</span>
+    </div>
 
     <table>
         <thead>
             <tr>
-                <th>ID Produk</th>
+                <th>ID</th>
+                <th>Serial</th>
+                <th>Kategori</th>
+                <th>Carat</th>
                 <th>Deskripsi</th>
-                <th>Total Berat SPKO</th>
-                <th>Total Berat NTHKO</th>
-                <th>Selisih</th>
+                <th class="num">Berat SPKO</th>
+                <th class="num">Berat NTHKO</th>
+                <th class="num">Selisih</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="table-body">
             {% for row in results %}
             <tr>
                 <td>{{ row.Id_product }}</td>
+                <td>{{ row.serial_no }}</td>
+                <td>{{ row.sub_category }}</td>
+                <td>{{ row.carat }}</td>
                 <td>{{ row.description }}</td>
-                <td>{{ "%.2f"|format(row.total_alloc) }}</td>
-                <td>{{ "%.2f"|format(row.total_completion) }}</td>
-                <td class="{{ 'zero' if row.selisih == 0 else 'positive' }}">
+                <td class="num">{{ "%.2f"|format(row.total_alloc) }}</td>
+                <td class="num">{{ "%.2f"|format(row.total_completion) }}</td>
+                <td class="num {{ 'zero' if row.selisih == 0 else 'positive' }}">
                     {{ "%.2f"|format(row.selisih) }}
                 </td>
             </tr>
             {% else %}
-            <tr>
-                <td colspan="5" style="text-align:center;">Belum ada data.</td>
-            </tr>
+            <tr><td colspan="8" class="empty">Belum ada data.</td></tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <script>
+        const REFRESH_INTERVAL = 10000;
+
+        function refreshTable() {
+            fetch('/api/weight-diff')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.getElementById('table-body');
+                    tbody.innerHTML = '';
+
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="empty">Belum ada data.</td></tr>';
+                    } else {
+                        data.forEach(row => {
+                            const tr = document.createElement('tr');
+                            const cls = parseFloat(row.selisih) === 0 ? 'zero' : 'positive';
+                            tr.innerHTML = `
+                                <td>${row.Id_product}</td>
+                                <td>${row.serial_no}</td>
+                                <td>${row.sub_category}</td>
+                                <td>${row.carat}</td>
+                                <td>${row.description}</td>
+                                <td class="num">${parseFloat(row.total_alloc).toFixed(2)}</td>
+                                <td class="num">${parseFloat(row.total_completion).toFixed(2)}</td>
+                                <td class="num ${cls}">${parseFloat(row.selisih).toFixed(2)}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    }
+
+                    document.getElementById('last-update').textContent =
+                        new Date().toLocaleTimeString('id-ID');
+                })
+                .catch(err => console.error('Refresh gagal:', err));
+        }
+
+        setInterval(refreshTable, REFRESH_INTERVAL);
+        document.getElementById('last-update').textContent =
+            new Date().toLocaleTimeString('id-ID');
+    </script>
 </body>
 </html>

@@ -20,9 +20,4 @@ class Workallocation extends Model
     {
         return $this->hasMany(Workallocationitem::class, 'IDM', 'ID');
     }
-
-    public function completion()
-    {
-        return $this->hasOne(Workcompletion::class, 'WorkAllocation', 'SW');
-    }
 }

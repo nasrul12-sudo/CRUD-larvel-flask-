@@ -1,19 +1,62 @@
-from flask import Flask, render_template, request
-import mysql.connector
-import os
+from flask import Flask, render_template, jsonify
+from sqlalchemy import func
+from database import SessionLocal
+from models import Product, WorkAllocationItem, WorkCompletionItem
 
 app = Flask(__name__)
 
-# Ambil config dari environment variable, fallback ke default
-DB_CONFIG = {
-    'host':     os.getenv('DB_HOST', '127.0.0.1'),
-    'user':     os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASS', 'nasrul'),
-    'database': os.getenv('DB_NAME', 'database_erp'),
-}
+def get_weight_diff_data():
+    session = SessionLocal()
+    try:
+        total_alloc = func.coalesce(func.sum(WorkAllocationItem.Weight), 0).label('total_alloc')
+        total_completion = func.coalesce(func.sum(WorkCompletionItem.Weight), 0).label('total_completion')
 
-def get_db():
-    return mysql.connector.connect(**DB_CONFIG)
+        query = (
+            session.query(
+                Product.Id_product.label('Id_product'),
+                func.coalesce(Product.custom_description, Product.description).label('description'),
+                func.coalesce(Product.custom_serial_no, Product.serial_no).label('serial_no'),
+                func.coalesce(Product.custom_carat, Product.carat).label('carat'),
+                Product.sub_category.label('sub_category'),
+                total_alloc,
+                total_completion,
+                (total_alloc - total_completion).label('selisih'),
+            )
+            .join(WorkAllocationItem, WorkAllocationItem.FG == Product.Id_product)
+            .outerjoin(
+                WorkCompletionItem,
+                (WorkCompletionItem.LinkID == WorkAllocationItem.IDM)
+                & (WorkCompletionItem.LinkOrd == WorkAllocationItem.Ordinal),
+            )
+            .group_by(
+                Product.Id_product,
+                Product.custom_description,
+                Product.description,
+                Product.custom_serial_no,
+                Product.serial_no,
+                Product.custom_carat,
+                Product.carat,
+                Product.sub_category,
+            )
+            .order_by(Product.sub_category, Product.Id_product)
+        )
+
+        results = query.all()
+        return [
+            {
+                'Id_product': row.Id_product,
+                'description': row.description,
+                'serial_no': row.serial_no,
+                'carat': row.carat,
+                'sub_category': row.sub_category,
+                'total_alloc': float(row.total_alloc),
+                'total_completion': float(row.total_completion),
+                'selisih': float(row.selisih),
+            }
+            for row in results
+        ]
+    finally:
+        session.close()
 
 @app.route('/')
 def index():
@@ -21,31 +64,11 @@ def index():
 
 @app.route('/weight-diff')
 def weight_diff():
-    conn = get_db()
-    cursor = conn.cursor(dictionary=True)
+    return render_template('weight_diff.html', results=get_weight_diff_data())
 
-    # ✅ Query hardcoded (tidak ada input user) = AMAN dari SQL Injection
-    query = """
-        SELECT
-            p.Id_product,
-            p.description,
-            COALESCE(SUM(wai.Weight), 0) AS total_alloc,
-            COALESCE(SUM(wci.Weight), 0) AS total_completion,
-            (COALESCE(SUM(wai.Weight), 0) - COALESCE(SUM(wci.Weight), 0)) AS selisih
-        FROM workallocationitem wai
-        JOIN product p ON p.Id_product = wai.FG
-        LEFT JOIN workcompletionitem wci
-               ON wci.LinkID  = wai.IDM
-              AND wci.LinkOrd = wai.Ordinal
-        GROUP BY p.Id_product, p.description
-        ORDER BY p.Id_product
-    """
-    cursor.execute(query)
-    results = cursor.fetchall()
-    cursor.close()
-    conn.close()
-
-    return render_template('weight_diff.html', results=results)
+@app.route('/api/weight-diff')
+def api_weight_diff():
+    return jsonify(get_weight_diff_data())
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

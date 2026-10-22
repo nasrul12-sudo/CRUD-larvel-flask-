@@ -1,7 +1,14 @@
 @extends('layouts.app')
 
 @section('content')
-<h1 class="text-2xl font-bold mb-4">Report Harian SPKO & NTHKO (Raw Query)</h1>
+<div class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-bold">Report Harian SPKO & NTHKO (Raw Query)</h1>
+    <a href="http://127.0.0.1:5000/weight-diff"
+       target="_blank"
+       class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold text-sm">
+        📊 Lihat Selisih Berat (Flask) ↗
+    </a>
+</div>
 
 <table class="w-full bg-white shadow rounded">
     <thead class="bg-gray-200">
