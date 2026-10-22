@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Selisih Berat per Produk</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background: #f5f5f5; }
+        h1 { color: #1e40af; }
+        table { border-collapse: collapse; width: 100%; background: white; }
+        th, td { border: 1px solid #999; padding: 8px 12px; text-align: left; }
+        th { background: #1e40af; color: white; }
+        tr:nth-child(even) { background: #f9fafb; }
+        .positive { color: #dc2626; font-weight: bold; }
+        .zero { color: #16a34a; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Selisih Berat per Produk (FG)</h1>
+    <p>Perbandingan total berat antara Work Allocation (SPKO) dan Work Completion (NTHKO).</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID Produk</th>
+                <th>Deskripsi</th>
+                <th>Total Berat SPKO</th>
+                <th>Total Berat NTHKO</th>
+                <th>Selisih</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in results %}
+            <tr>
+                <td>{{ row.Id_product }}</td>
+                <td>{{ row.description }}</td>
+                <td>{{ "%.2f"|format(row.total_alloc) }}</td>
+                <td>{{ "%.2f"|format(row.total_completion) }}</td>
+                <td class="{{ 'zero' if row.selisih == 0 else 'positive' }}">
+                    {{ "%.2f"|format(row.selisih) }}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align:center;">Belum ada data.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
