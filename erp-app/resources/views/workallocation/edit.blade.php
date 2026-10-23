@@ -31,8 +31,8 @@
             <thead class="bg-gray-200">
                 <tr>
                     <th class="p-2 text-left w-10">#</th>
-                    <th class="p-2 text-left min-w-[140px]">Kategori</th>
-                    <th class="p-2 text-left min-w-[180px]">Deskripsi (Manual)</th>
+                    <th class="p-2 text-left min-w-140px">Kategori</th>
+                    <th class="p-2 text-left min-w-180px">Deskripsi (Manual)</th>
                     <th class="p-2 text-left w-24">Serial (Manual)</th>
                     <th class="p-2 text-left w-20">Carat (Manual)</th>
                     <th class="p-2 text-left w-16">Qty</th>
