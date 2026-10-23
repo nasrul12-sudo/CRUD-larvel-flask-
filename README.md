@@ -269,7 +269,7 @@ cd ~/Project/interview/erp-docker
 Jalankan MySQL client di dalam container:
 
 ```bash
-docker compose exec erp_mysql mysql -uroot -p
+docker compose exec erp_mysql mysql -uroot -p"$(grep MYSQL_ROOT_PASSWORD .env | cut -d= -f2)"
 ```
 
 Masukkan password root MySQL saat diminta. Cara ini lebih aman daripada menuliskan password langsung dalam argumen perintah.
