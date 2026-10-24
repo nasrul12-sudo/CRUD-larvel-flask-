@@ -2,7 +2,7 @@
 @section('content')
 <div class="flex justify-between mb-4">
     <h1 class="text-2xl font-bold">Daftar NTHKO (Nota Terima Kerja)</h1>
-    <a href="{{ route('workcompletion.create') }}" class="bg-green-600 text-white px-4 py-2 rounded">+ Buat NTHKO</a>
+    <a href="{{ route('workcompletion.create') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">+ Buat NTHKO</a>
 </div>
 
 <div class="space-y-4">
@@ -10,11 +10,11 @@
     <div class="bg-white shadow rounded border border-gray-200">
         <div class="bg-gray-50 p-4 border-b flex justify-between items-center">
             <div>
+                {{-- ⭐ Tampilkan SW (Nomor NTHKO), bukan ID --}}
                 <span class="font-bold text-lg text-green-700">{{ $row->SW }}</span>
                 <span class="text-gray-500 text-sm ml-4">Ref SPKO: {{ $row->WorkAllocation }}</span>
                 <span class="text-gray-500 text-sm ml-4">Proses: {{ $row->Process }}</span>
                 <span class="text-gray-500 text-sm ml-4">Operator: {{ $row->employee->nama ?? '-' }}</span>
-                <span class="text-xs text-gray-400 ml-4 block mt-1">Update: {{ $row->updated_at ? $row->updated_at->format('d M Y H:i') : '-' }}</span>
             </div>
             <form action="{{ route('workcompletion.destroy', $row->ID) }}" method="POST" onsubmit="return confirm('Hapus NTHKO ini?')">
                 @csrf @method('DELETE')
@@ -27,18 +27,18 @@
                     <th class="p-2 text-left">#</th>
                     <th class="p-2 text-left">Kategori</th>
                     <th class="p-2 text-left">Deskripsi</th>
-                    <th class="p-2 text-right">Qty Selesai</th>
+                    <th class="p-2 text-right">Qty</th>
                     <th class="p-2 text-right">Berat Aktual (gr)</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($row->items as $item)
-                <tr class="border-b">
+                <tr class="border-b last:border-0">
                     <td class="p-2">{{ $item->Ordinal }}</td>
                     <td class="p-2 font-semibold">{{ $item->product->sub_category ?? '-' }}</td>
                     <td class="p-2">{{ $item->product->custom_description ?? $item->product->description ?? '-' }}</td>
                     <td class="p-2 text-right font-bold text-green-600">{{ $item->Qty }}</td>
-                    <td class="p-2 text-right font-bold">{{ number_format($item->Weight, 2) }}</td>
+                    <td class="p-2 text-right">{{ number_format($item->Weight, 2) }}</td>
                 </tr>
                 @endforeach
             </tbody>

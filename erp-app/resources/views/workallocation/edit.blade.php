@@ -16,6 +16,14 @@
             </select>
         </div>
         <div>
+            <label class="block mb-1 font-semibold">Proses</label>
+            <select name="Process" class="w-full border p-2 rounded" required>
+                @foreach(['Cor','Brush','Bombing','Slep'] as $p)
+                    <option value="{{ $p }}" {{ $wa->Process == $p ? 'selected' : '' }}>{{ $p }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div>
             <label class="block mb-1 font-semibold">Tanggal</label>
             <input type="date" name="TransDate" value="{{ $wa->TransDate }}" class="w-full border p-2 rounded" required>
         </div>
@@ -31,8 +39,8 @@
             <thead class="bg-gray-200">
                 <tr>
                     <th class="p-2 text-left w-10">#</th>
-                    <th class="p-2 text-left min-w-140px">Kategori</th>
-                    <th class="p-2 text-left min-w-180px">Deskripsi (Manual)</th>
+                    <th class="p-2 text-left min-w-[140px]">Kategori</th>
+                    <th class="p-2 text-left min-w-[180px]">Deskripsi (Manual)</th>
                     <th class="p-2 text-left w-24">Serial (Manual)</th>
                     <th class="p-2 text-left w-20">Carat (Manual)</th>
                     <th class="p-2 text-left w-16">Qty</th>
@@ -116,11 +124,19 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('add-row-btn').addEventListener('click', addRow);
     updateRowNumber();
 
-    document.getElementById('spko-form').addEventListener('submit', function() {
+    document.getElementById('spko-form').addEventListener('submit', function(e) {
+        // ⭐ 1. Bersihkan semua atribut name terlebih dahulu
+        body.querySelectorAll('.product-row input, .product-row select').forEach(el => {
+            el.removeAttribute('name');
+        });
+
         let idx = 0;
+        let hasItems = false;
+
+        // ⭐ 2. Beri name baru hanya pada baris yang masih ada
         body.querySelectorAll('.product-row').forEach(row => {
             const cat = row.querySelector('.cat-select').value;
-            if (!cat) return;
+            if (!cat) return; // Abaikan baris kosong
 
             row.querySelector('.cat-select').setAttribute('name', `items[${idx}][sub_category]`);
             row.querySelector('.desc-input').setAttribute('name', `items[${idx}][description]`);
@@ -129,7 +145,13 @@ document.addEventListener("DOMContentLoaded", function() {
             row.querySelector('.qty-input').setAttribute('name', `items[${idx}][qty]`);
             row.querySelector('.weight-input').setAttribute('name', `items[${idx}][weight]`);
             idx++;
+            hasItems = true;
         });
+
+        if (!hasItems) {
+            alert('Minimal 1 produk.');
+            e.preventDefault();
+        }
     });
 });
 </script>

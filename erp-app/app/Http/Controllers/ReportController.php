@@ -9,6 +9,7 @@ class ReportController extends Controller
 {
     /**
      * Soal No.3 — Raw Query (TANPA Eloquent)
+     * Menampilkan SPKO & NTHKO harian
      */
     public function daily()
     {
@@ -18,7 +19,7 @@ class ReportController extends Controller
                 wa.SW                AS no_spko,
                 wa.Process           AS proses,
                 e.nama               AS operator,
-                wc.ID                AS nthko_id,
+                wc.SW                AS nthko_sw,
                 wc.TransDate         AS nthko_date
             FROM workallocation wa
             LEFT JOIN workcompletion wc ON wc.WorkAllocation = wa.SW

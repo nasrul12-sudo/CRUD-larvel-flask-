@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\DB;
 
 class WorkCompletionController extends Controller
 {
+    /**
+     * Menampilkan daftar NTHKO
+     */
     public function index()
     {
         $data = Workcompletion::with(['employee', 'items.product'])
@@ -19,9 +22,11 @@ class WorkCompletionController extends Controller
         return view('workcompletion.index', compact('data'));
     }
 
+    /**
+     * Form untuk membuat NTHKO baru (hanya SPKO yang belum punya NTHKO)
+     */
     public function create()
     {
-        // Tampilkan SPKO yang belum dibuatkan NTHKO
         $allocations = Workallocation::whereNotIn('SW', function($query) {
             $query->select('WorkAllocation')->from('workcompletion');
         })->orderBy('ID', 'desc')->get();
@@ -29,6 +34,25 @@ class WorkCompletionController extends Controller
         return view('workcompletion.create', compact('allocations'));
     }
 
+    /**
+     * Generate nomor NTHKO: NTHKO + yy + mm + 3 digit urut
+     */
+    private function generateNTHKO(): string
+    {
+        $prefix = 'NTHKO' . date('ym');
+        $last = Workcompletion::where('SW', 'like', $prefix . '%')
+            ->orderBy('SW', 'desc')
+            ->lockForUpdate()
+            ->first();
+        
+        $num = $last ? ((int) substr($last->SW, -3) + 1) : 1;
+        
+        return $prefix . str_pad($num, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Simpan NTHKO baru
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -42,12 +66,16 @@ class WorkCompletionController extends Controller
         DB::beginTransaction();
         try {
             $wa = Workallocation::where('SW', $request->WorkAllocation)->firstOrFail();
+            
+            // ⭐ Generate Nomor NTHKO
+            $nthkoSw = $this->generateNTHKO();
 
             $wc = Workcompletion::create([
+                'SW'             => $nthkoSw,
                 'Remarks'        => 'Penerimaan Hasil Kerja',
                 'Employee'       => $wa->Employee,
                 'TransDate'      => date('Y-m-d'),
-                'Process'        => $wa->Process, // Ambil proses dari SPKO
+                'Process'        => $wa->Process,
                 'WorkAllocation' => $wa->SW,
             ]);
 
@@ -66,13 +94,17 @@ class WorkCompletionController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('workcompletion.index')->with('success', 'NTHKO berhasil dibuat.');
+            return redirect()->route('workcompletion.index')
+                ->with('success', 'NTHKO ' . $nthkoSw . ' berhasil dibuat.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => $e->getMessage()])->withInput();
+            return back()->withErrors(['error' => 'Gagal simpan: ' . $e->getMessage()])->withInput();
         }
     }
 
+    /**
+     * Hapus NTHKO
+     */
     public function destroy($id)
     {
         DB::beginTransaction();
@@ -84,7 +116,7 @@ class WorkCompletionController extends Controller
             return redirect()->route('workcompletion.index')->with('success', 'NTHKO berhasil dihapus.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => $e->getMessage()]);
+            return back()->withErrors(['error' => 'Gagal hapus: ' . $e->getMessage()]);
         }
     }
 }

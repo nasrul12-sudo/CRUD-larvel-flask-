@@ -78,7 +78,7 @@
             <select class="cat-select w-full border p-1 rounded">
                 <option value="">-- Pilih Kategori --</option>
                 @foreach($categories as $code => $name)
-                    <option value="{{ $code }}">{{ $code }} — {{ $name }}</option>
+                    <option value="{{ $code }}">{{ $code }}</option>
                 @endforeach
             </select>
         </td>
@@ -132,14 +132,20 @@ document.addEventListener("DOMContentLoaded", function() {
     addRow();
 
     document.getElementById('spko-form').addEventListener('submit', function(e) {
+        // ⭐ 1. Bersihkan semua atribut name terlebih dahulu
+        body.querySelectorAll('.product-row input, .product-row select').forEach(el => {
+            el.removeAttribute('name');
+        });
+
         let valid = true, hasItems = false;
         const usedCats = [];
         
+        // ⭐ 2. Beri name baru hanya pada baris yang masih ada
         body.querySelectorAll('.product-row').forEach(row => {
             const cat = row.querySelector('.cat-select').value;
             const qty = parseInt(row.querySelector('.qty-input').value) || 0;
             
-            if (!cat || qty < 1) return;
+            if (!cat || qty < 1) return; // Abaikan baris yang tidak valid/kosong
 
             if (usedCats.includes(cat)) {
                 alert('Kategori tidak boleh duplikat.'); valid = false; return;

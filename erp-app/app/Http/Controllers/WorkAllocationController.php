@@ -119,6 +119,7 @@ class WorkAllocationController extends Controller
                 'Process'   => $request->Process,
             ]);
 
+            // ⭐ Hapus semua item lama lalu insert ulang
             Workallocationitem::where('IDM', $wa->ID)->delete();
 
             $ordinal = 1;
